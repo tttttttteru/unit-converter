@@ -289,7 +289,7 @@ const CATEGORIES = [
     ],
   },
   {
-    name: "データ量",
+    name: "データ量・通信量",
     default: "gb",
     units: [
       { id: "bit", label: "ビット (bit)", factor: 1 / 8 },
@@ -302,6 +302,22 @@ const CATEGORIES = [
       { id: "mib", label: "メビバイト (MiB)", factor: 2 ** 20 },
       { id: "gib", label: "ギビバイト (GiB)", factor: 2 ** 30 },
       { id: "tib", label: "テビバイト (TiB)", factor: 2 ** 40 },
+    ],
+  },
+  {
+    // 回線の速度は bit/s 、ダウンロード表示などは B/s で書かれることが多い (1 B = 8 bit)
+    name: "通信速度",
+    default: "mbps",
+    units: [
+      { id: "bps", label: "ビット毎秒 (bps)", factor: 1 },
+      { id: "kbps", label: "キロビット毎秒 (kbps)", factor: 1e3 },
+      { id: "mbps", label: "メガビット毎秒 (Mbps)", factor: 1e6 },
+      { id: "gbps", label: "ギガビット毎秒 (Gbps)", factor: 1e9 },
+      { id: "tbps", label: "テラビット毎秒 (Tbps)", factor: 1e12 },
+      { id: "bs", label: "バイト毎秒 (B/s)", factor: 8 },
+      { id: "kbs", label: "キロバイト毎秒 (kB/s)", factor: 8e3 },
+      { id: "mbs", label: "メガバイト毎秒 (MB/s)", factor: 8e6 },
+      { id: "gbs", label: "ギガバイト毎秒 (GB/s)", factor: 8e9 },
     ],
   },
   {
