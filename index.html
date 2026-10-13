@@ -103,8 +103,7 @@ h2 {
 }
 
 input,
-select,
-.result {
+select {
   min-width: 0;
   padding: 10px 12px;
   border: 1px solid var(--border);
@@ -119,31 +118,11 @@ select {
   font-size: 0.95rem;
 }
 
-.result {
-  overflow-x: auto;
-  white-space: nowrap;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
 input:focus-visible,
 select:focus-visible,
 button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
-}
-
-.swap {
-  display: block;
-  width: 40px;
-  height: 40px;
-  margin: 10px auto;
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  background: var(--card);
-  color: var(--accent);
-  font-size: 1.2rem;
-  cursor: pointer;
 }
 
 /* 一覧 */
@@ -176,6 +155,7 @@ button:focus-visible {
 .all .num {
   overflow-wrap: anywhere;
   text-align: right;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
   </style>
@@ -193,18 +173,10 @@ button:focus-visible {
         <input id="value" type="number" step="any" value="1" inputmode="decimal">
         <select id="from" aria-label="変換元の単位"></select>
       </div>
-
-      <button id="swap" class="swap" type="button" title="単位を入れ替える" aria-label="単位を入れ替える">⇅</button>
-
-      <div class="field">
-        <label for="to">変換結果</label>
-        <output id="result" class="result" for="value from to">—</output>
-        <select id="to" aria-label="変換先の単位"></select>
-      </div>
     </section>
 
-    <section>
-      <h2>ほかの単位では</h2>
+    <section aria-live="polite">
+      <h2>変換結果</h2>
       <ul id="all" class="all"></ul>
     </section>
   </main>
@@ -217,7 +189,7 @@ button:focus-visible {
 const CATEGORIES = [
   {
     name: "長さ",
-    defaults: ["cm", "in"],
+    default: "cm",
     units: [
       { id: "nm", label: "ナノメートル (nm)", factor: 1e-9 },
       { id: "um", label: "マイクロメートル (μm)", factor: 1e-6 },
@@ -238,7 +210,7 @@ const CATEGORIES = [
   },
   {
     name: "重さ",
-    defaults: ["kg", "lb"],
+    default: "kg",
     units: [
       { id: "mg", label: "ミリグラム (mg)", factor: 1e-6 },
       { id: "g", label: "グラム (g)", factor: 1e-3 },
@@ -253,7 +225,7 @@ const CATEGORIES = [
   {
     // 温度は掛け算だけでは変換できないので、基準(摂氏)との相互変換を関数で持つ
     name: "温度",
-    defaults: ["c", "f"],
+    default: "c",
     units: [
       { id: "c", label: "摂氏 (℃)", toBase: (v) => v, fromBase: (v) => v },
       { id: "f", label: "華氏 (℉)", toBase: (v) => (v - 32) / 1.8, fromBase: (v) => v * 1.8 + 32 },
@@ -262,7 +234,7 @@ const CATEGORIES = [
   },
   {
     name: "面積",
-    defaults: ["m2", "tsubo"],
+    default: "m2",
     units: [
       { id: "mm2", label: "平方ミリメートル (mm²)", factor: 1e-6 },
       { id: "cm2", label: "平方センチメートル (cm²)", factor: 1e-4 },
@@ -278,7 +250,7 @@ const CATEGORIES = [
   },
   {
     name: "体積",
-    defaults: ["l", "gal"],
+    default: "l",
     units: [
       { id: "ml", label: "ミリリットル (mL)", factor: 1e-3 },
       { id: "l", label: "リットル (L)", factor: 1 },
@@ -294,7 +266,7 @@ const CATEGORIES = [
   },
   {
     name: "速度",
-    defaults: ["kmh", "ms"],
+    default: "kmh",
     units: [
       { id: "ms", label: "メートル毎秒 (m/s)", factor: 1 },
       { id: "kmh", label: "キロメートル毎時 (km/h)", factor: 1 / 3.6 },
@@ -305,7 +277,7 @@ const CATEGORIES = [
   },
   {
     name: "時間",
-    defaults: ["h", "min"],
+    default: "h",
     units: [
       { id: "ms", label: "ミリ秒", factor: 1e-3 },
       { id: "s", label: "秒", factor: 1 },
@@ -318,7 +290,7 @@ const CATEGORIES = [
   },
   {
     name: "データ量",
-    defaults: ["gb", "mb"],
+    default: "gb",
     units: [
       { id: "bit", label: "ビット (bit)", factor: 1 / 8 },
       { id: "b", label: "バイト (B)", factor: 1 },
@@ -334,7 +306,7 @@ const CATEGORIES = [
   },
   {
     name: "圧力",
-    defaults: ["hpa", "atm"],
+    default: "hpa",
     units: [
       { id: "pa", label: "パスカル (Pa)", factor: 1 },
       { id: "hpa", label: "ヘクトパスカル (hPa)", factor: 100 },
@@ -348,7 +320,7 @@ const CATEGORIES = [
   },
   {
     name: "エネルギー",
-    defaults: ["kcal", "kj"],
+    default: "kcal",
     units: [
       { id: "j", label: "ジュール (J)", factor: 1 },
       { id: "kj", label: "キロジュール (kJ)", factor: 1e3 },
@@ -362,7 +334,7 @@ const CATEGORIES = [
   {
     // L/100km は「値が小さいほど燃費が良い」逆数の関係なので、関数で変換する
     name: "燃費",
-    defaults: ["kml", "l100km"],
+    default: "kml",
     units: [
       { id: "kml", label: "キロメートル毎リットル (km/L)", factor: 1 },
       { id: "l100km", label: "リットル毎100km (L/100km)", toBase: (v) => 100 / v, fromBase: (v) => 100 / v },
@@ -372,7 +344,7 @@ const CATEGORIES = [
   },
   {
     name: "力",
-    defaults: ["n", "kgf"],
+    default: "n",
     units: [
       { id: "n", label: "ニュートン (N)", factor: 1 },
       { id: "kn", label: "キロニュートン (kN)", factor: 1e3 },
@@ -384,7 +356,7 @@ const CATEGORIES = [
   },
   {
     name: "トルク",
-    defaults: ["nm", "kgfm"],
+    default: "nm",
     units: [
       { id: "ncm", label: "ニュートンセンチメートル (N·cm)", factor: 1e-2 },
       { id: "nm", label: "ニュートンメートル (N·m)", factor: 1 },
@@ -397,7 +369,7 @@ const CATEGORIES = [
   },
   {
     name: "仕事率",
-    defaults: ["kw", "ps"],
+    default: "kw",
     units: [
       { id: "w", label: "ワット (W)", factor: 1 },
       { id: "kw", label: "キロワット (kW)", factor: 1e3 },
@@ -413,9 +385,6 @@ const CATEGORIES = [
 const categoriesEl = document.getElementById("categories");
 const valueEl = document.getElementById("value");
 const fromEl = document.getElementById("from");
-const toEl = document.getElementById("to");
-const resultEl = document.getElementById("result");
-const swapEl = document.getElementById("swap");
 const allEl = document.getElementById("all");
 
 let current = CATEGORIES[0];
@@ -443,14 +412,14 @@ function findUnit(id) {
 
 function update() {
   const from = findUnit(fromEl.value);
-  const to = findUnit(toEl.value);
   // 入力が空のときは NaN にして「—」を表示する
   const value = valueEl.value.trim() === "" ? NaN : Number(valueEl.value);
 
-  resultEl.textContent = format(convert(value, from, to));
+  // 変換元と同じ単位は一覧に出さない
+  const others = current.units.filter((unit) => unit !== from);
 
   allEl.replaceChildren(
-    ...current.units.map((unit) => {
+    ...others.map((unit) => {
       const li = document.createElement("li");
       const name = document.createElement("span");
       const num = document.createElement("span");
@@ -471,10 +440,8 @@ function selectCategory(category) {
     button.setAttribute("aria-pressed", String(button.textContent === category.name));
   }
 
-  for (const select of [fromEl, toEl]) {
-    select.replaceChildren(...category.units.map((u) => new Option(u.label, u.id)));
-  }
-  [fromEl.value, toEl.value] = category.defaults;
+  fromEl.replaceChildren(...category.units.map((u) => new Option(u.label, u.id)));
+  fromEl.value = category.default;
 
   update();
 }
@@ -489,11 +456,6 @@ for (const category of CATEGORIES) {
 
 valueEl.addEventListener("input", update);
 fromEl.addEventListener("change", update);
-toEl.addEventListener("change", update);
-swapEl.addEventListener("click", () => {
-  [fromEl.value, toEl.value] = [toEl.value, fromEl.value];
-  update();
-});
 
 selectCategory(current);
   </script>
