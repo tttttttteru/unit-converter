@@ -1,6 +1,6 @@
-// 自動判別: ドロップされたファイルの中身から種類を調べ、合う変換ツールに切り替えて渡す。
+// 自動選択: ドロップされたファイルの中身から種類を調べ、合う変換ツールを表示して渡す。
 (() => {
-  const { $, showTab, readText } = Tools;
+  const { $, readText } = Tools;
 
   const TEXT_LIMIT = 5 * 1024 * 1024; // これより大きいテキストは、形式の判定をしない
   const ENCODE_LIMIT = 1024 * 1024; // エンコードのツールに渡せるテキストの大きさ
@@ -143,29 +143,34 @@
     return { tool: TOOLS.encode };
   }
 
+  // 渡せるツールがなかったときは、前のファイルのツールを出したままにしない
+  function fail(text) {
+    message.textContent = text;
+    for (const t of Object.values(TOOLS)) $("tab-" + t.tab).hidden = true;
+  }
+
   async function route(file) {
     const id = ++run;
     message.textContent = "";
-    if (file.size === 0) {
-      message.textContent = "空のファイルです";
-      return;
-    }
+    if (file.size === 0) return fail("空のファイルです");
     const { tool, kind, reason } = await choose(file);
     if (id !== run) return;
-    if (!tool) {
-      message.textContent = reason;
-      return;
-    }
-    showTab(tool.tab);
+    if (!tool) return fail(reason);
+    // プルダウンは「自動選択」のまま、判定したツールだけをドロップエリアの下に出す
+    for (const t of Object.values(TOOLS)) $("tab-" + t.tab).hidden = t !== tool;
     await tool.open(file, kind);
-    window.scrollTo({ top: 0 });
-    // 次にこのタブに戻ったとき、前のファイルが残らないようにする
-    $("x-file").value = "";
-    $("x-file").closest(".dropzone").querySelector(".dz-file").textContent = "";
   }
 
   $("x-file").addEventListener("change", (e) => {
     const file = e.target.files[0];
     if (file) route(file);
+  });
+
+  // プルダウンで別の種類を選んだら(「自動選択」に戻したときも)、前のファイルの表示は消す
+  $("tab-select").addEventListener("change", () => {
+    run++;
+    message.textContent = "";
+    $("x-file").value = "";
+    $("x-file").closest(".dropzone").querySelector(".dz-file").textContent = "";
   });
 })();

@@ -19,7 +19,7 @@
     <div class="picker">
       <label for="tab-select">変換する種類</label>
       <select id="tab-select">
-        <option value="detect">自動判別(ドロップするだけ)</option>
+        <option value="detect">自動選択</option>
         <option value="image">画像 (PNG・JPEG・WebP)</option>
         <option value="audio">音声 (MP3・WAV)</option>
         <option value="pdf">PDF → Word</option>
@@ -31,7 +31,7 @@
     <section id="tab-detect" class="tool" role="tabpanel" hidden>
       <label class="dropzone">
         <span class="dz-title">変換したいファイルを、ここにドラッグ&amp;ドロップ</span>
-        <span class="dz-sub">種類を自動で判別して、合う変換ツールに切り替えます(クリックして選ぶこともできます)</span>
+        <span class="dz-sub">種類を自動で判別して、合う変換ツールを下に表示します(クリックして選ぶこともできます)</span>
         <span class="dz-file" aria-live="polite"></span>
         <input id="x-file" type="file" class="visually-hidden" aria-label="変換するファイル">
       </label>
