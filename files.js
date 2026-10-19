@@ -200,6 +200,24 @@
     if (dOut.value) dIn.value = dOut.value;
     convertData();
   });
+  // ファイルを読み込んだら入力欄に入れ、拡張子から変換元の形式を選ぶ
+  const MAX_TEXT_BYTES = 5 * 1024 * 1024;
+  $("d-file").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > MAX_TEXT_BYTES) {
+      dErr.textContent = "ファイルが大きすぎます(5 MB まで)";
+      return;
+    }
+    dIn.value = await file.text();
+    const ext = file.name.split(".").pop().toLowerCase();
+    const format = { json: "json", yaml: "yaml", yml: "yaml", csv: "csv", xml: "xml" }[ext];
+    if (format) {
+      dFrom.value = format;
+      if (dTo.value === format) dTo.value = Object.keys(FORMATS).find((f) => f !== format);
+    }
+    convertData();
+  });
   bindCopy($("d-copy"), () => dOut.value);
   $("d-save").addEventListener("click", () => {
     if (dOut.value) saveText(dOut.value, "converted." + FORMATS[dTo.value].ext, FORMATS[dTo.value].type);

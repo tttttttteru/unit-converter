@@ -16,15 +16,24 @@
     <h1>ファイル変換</h1>
     <p class="lead">画像・音声・PDF のファイル形式や、JSON・CSV などのデータ形式を変換します。ファイルはお使いの端末のブラウザ内だけで処理され、外部には送信されません。</p>
 
-    <div id="tabs" class="tabs" role="tablist" aria-label="ツール">
-      <button type="button" role="tab" data-tab="data">データ形式</button>
-      <button type="button" role="tab" data-tab="encode">エンコード</button>
-      <button type="button" role="tab" data-tab="image">画像</button>
-      <button type="button" role="tab" data-tab="audio">音声</button>
-      <button type="button" role="tab" data-tab="pdf">PDF→Word</button>
+    <div class="picker">
+      <label for="tab-select">変換する種類</label>
+      <select id="tab-select">
+        <option value="image">画像 (PNG・JPEG・WebP)</option>
+        <option value="audio">音声 (MP3・WAV)</option>
+        <option value="pdf">PDF → Word</option>
+        <option value="data">データ形式 (JSON・CSV など)</option>
+        <option value="encode">エンコード (Base64 など)</option>
+      </select>
     </div>
 
     <section id="tab-data" class="tool" role="tabpanel" hidden>
+      <label class="dropzone compact">
+        <span class="dz-title">JSON・CSV・YAML・XML のファイルをここにドロップして読み込む</span>
+        <span class="dz-sub">またはクリックしてファイルを選ぶ(下の入力欄に貼り付けても使えます)</span>
+        <span class="dz-file" aria-live="polite"></span>
+        <input id="d-file" type="file" accept=".json,.yaml,.yml,.csv,.xml,.txt,text/*,application/json,application/xml" class="visually-hidden" aria-label="読み込むデータファイル">
+      </label>
       <div class="row">
         <select id="d-from" aria-label="変換元の形式">
           <option value="json">JSON</option>
@@ -72,7 +81,12 @@
       <div class="row"><button type="button" id="e-copy" class="btn">コピー</button></div>
     </section>
     <section id="tab-image" class="tool" role="tabpanel" hidden>
-      <input id="i-file" type="file" accept="image/*" aria-label="変換する画像">
+      <label class="dropzone">
+        <span class="dz-title">画像をここにドラッグ&amp;ドロップ</span>
+        <span class="dz-sub">またはクリックしてファイルを選ぶ</span>
+        <span class="dz-file" aria-live="polite"></span>
+        <input id="i-file" type="file" accept="image/*" class="visually-hidden" aria-label="変換する画像">
+      </label>
       <div class="row">
         <label>形式
           <select id="i-fmt">
@@ -93,7 +107,12 @@
       <p class="note">画像はこの端末のブラウザ内だけで処理され、外部には送信されません。読み込める形式はお使いのブラウザによります。</p>
     </section>
     <section id="tab-audio" class="tool" role="tabpanel" hidden>
-      <input id="a-file" type="file" accept="audio/*,video/*" aria-label="変換する音声ファイル">
+      <label class="dropzone">
+        <span class="dz-title">音声ファイルをここにドラッグ&amp;ドロップ</span>
+        <span class="dz-sub">またはクリックしてファイルを選ぶ</span>
+        <span class="dz-file" aria-live="polite"></span>
+        <input id="a-file" type="file" accept="audio/*,video/*" class="visually-hidden" aria-label="変換する音声ファイル">
+      </label>
       <div class="row">
         <label>形式
           <select id="a-fmt">
@@ -117,7 +136,12 @@
       <p class="note">音声はこの端末のブラウザ内だけで処理され、外部には送信されません。読み込める形式はお使いのブラウザによります。長い音声はメモリを多く使います。</p>
     </section>
     <section id="tab-pdf" class="tool" role="tabpanel" hidden>
-      <input id="p-file" type="file" accept="application/pdf,.pdf" aria-label="変換する PDF">
+      <label class="dropzone">
+        <span class="dz-title">PDF をここにドラッグ&amp;ドロップ</span>
+        <span class="dz-sub">またはクリックしてファイルを選ぶ</span>
+        <span class="dz-file" aria-live="polite"></span>
+        <input id="p-file" type="file" accept="application/pdf,.pdf" class="visually-hidden" aria-label="変換する PDF">
+      </label>
       <label class="check"><input type="checkbox" id="p-merge"> 続く行をつなげて、段落にまとめる</label>
       <div class="row"><button type="button" id="p-go" class="btn primary">Word (.docx) に変換する</button></div>
       <p id="p-err" class="error" role="alert"></p>

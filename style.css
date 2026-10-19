@@ -328,3 +328,85 @@ input[type="range"] {
   color: var(--muted);
   font-size: 0.9rem;
 }
+
+/* 変換の種類を選ぶプルダウン */
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 20px;
+}
+
+.picker label {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.picker select {
+  width: 100%;
+  font-size: 1rem;
+}
+
+/* ファイルのドロップエリア */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  padding: 32px 16px;
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  text-align: center;
+  cursor: pointer;
+}
+
+.dropzone.compact {
+  padding: 16px;
+}
+
+/* ドラッグ中、子要素に邪魔されて点滅しないようにする */
+.dropzone > * {
+  pointer-events: none;
+}
+
+.dropzone:hover,
+.dropzone.dragover,
+.dropzone:focus-within {
+  border-color: var(--accent);
+}
+
+.dropzone.dragover {
+  background: color-mix(in srgb, var(--accent) 10%, var(--card));
+}
+
+.dz-title {
+  font-weight: 600;
+}
+
+.dz-sub {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.dz-file {
+  overflow-wrap: anywhere;
+  font-size: 0.9rem;
+}
+
+.dz-file:empty {
+  display: none;
+}
+
+.dz-file.bad {
+  color: var(--error);
+}
