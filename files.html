@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ファイル変換 | 変換ツール</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <nav class="sitenav" aria-label="ページ">
+      <a href="index.html">単位変換</a>
+      <a href="files.html" aria-current="page">ファイル変換</a>
+    </nav>
+
+    <h1>ファイル変換</h1>
+    <p class="lead">画像・音声・PDF のファイル形式や、JSON・CSV などのデータ形式を変換します。ファイルはお使いの端末のブラウザ内だけで処理され、外部には送信されません。</p>
+
+    <div id="tabs" class="tabs" role="tablist" aria-label="ツール">
+      <button type="button" role="tab" data-tab="data">データ形式</button>
+      <button type="button" role="tab" data-tab="encode">エンコード</button>
+      <button type="button" role="tab" data-tab="image">画像</button>
+      <button type="button" role="tab" data-tab="audio">音声</button>
+      <button type="button" role="tab" data-tab="pdf">PDF→Word</button>
+    </div>
+
+    <section id="tab-data" class="tool" role="tabpanel" hidden>
+      <div class="row">
+        <select id="d-from" aria-label="変換元の形式">
+          <option value="json">JSON</option>
+          <option value="yaml">YAML</option>
+          <option value="csv">CSV</option>
+          <option value="xml">XML</option>
+        </select>
+        <span aria-hidden="true">→</span>
+        <select id="d-to" aria-label="変換先の形式">
+          <option value="json">JSON</option>
+          <option value="yaml" selected>YAML</option>
+          <option value="csv">CSV</option>
+          <option value="xml">XML</option>
+        </select>
+        <button type="button" id="d-swap" class="btn">入れ替え</button>
+      </div>
+      <textarea id="d-in" spellcheck="false" aria-label="変換元のデータ" placeholder="ここにデータを貼り付けてください"></textarea>
+      <label class="check"><input type="checkbox" id="d-auto" checked> CSV・XML の数値や true/false を、文字ではなく数値・真偽値にする</label>
+      <p id="d-err" class="error" role="alert"></p>
+      <textarea id="d-out" readonly spellcheck="false" aria-label="変換結果"></textarea>
+      <div class="row">
+        <button type="button" id="d-copy" class="btn">コピー</button>
+        <button type="button" id="d-save" class="btn">ダウンロード</button>
+      </div>
+      <p class="note">CSV は 1 行目を見出しとして扱います。XML の属性は「@名前」、タグ内の本文は「#text」という名前になります。</p>
+    </section>
+    <section id="tab-encode" class="tool" role="tabpanel" hidden>
+      <div class="row">
+        <select id="e-codec" aria-label="方式">
+          <option value="base64">Base64</option>
+          <option value="url">URL エンコード</option>
+          <option value="hex">16進数 (UTF-8)</option>
+          <option value="html">HTML 実体参照</option>
+          <option value="unicode">Unicode エスケープ (\uXXXX)</option>
+        </select>
+        <select id="e-dir" aria-label="方向">
+          <option value="enc">エンコード</option>
+          <option value="dec">デコード</option>
+        </select>
+        <button type="button" id="e-swap" class="btn">入れ替え</button>
+      </div>
+      <textarea id="e-in" spellcheck="false" aria-label="入力" placeholder="ここに文字を入力してください">変換ツール Hello!</textarea>
+      <p id="e-err" class="error" role="alert"></p>
+      <textarea id="e-out" readonly spellcheck="false" aria-label="結果"></textarea>
+      <div class="row"><button type="button" id="e-copy" class="btn">コピー</button></div>
+    </section>
+    <section id="tab-image" class="tool" role="tabpanel" hidden>
+      <input id="i-file" type="file" accept="image/*" aria-label="変換する画像">
+      <div class="row">
+        <label>形式
+          <select id="i-fmt">
+            <option value="image/png">PNG</option>
+            <option value="image/jpeg" selected>JPEG</option>
+            <option value="image/webp">WebP</option>
+          </select>
+        </label>
+        <label id="i-qwrap">画質
+          <input id="i-q" type="range" min="10" max="100" value="85">
+          <output id="i-qv">85</output>%
+        </label>
+      </div>
+      <p id="i-err" class="error" role="alert"></p>
+      <p id="i-info" class="note"></p>
+      <img id="i-prev" class="preview" alt="変換後のプレビュー" hidden>
+      <div class="row"><a id="i-dl" class="btn primary" hidden>ダウンロード</a></div>
+      <p class="note">画像はこの端末のブラウザ内だけで処理され、外部には送信されません。読み込める形式はお使いのブラウザによります。</p>
+    </section>
+    <section id="tab-audio" class="tool" role="tabpanel" hidden>
+      <input id="a-file" type="file" accept="audio/*,video/*" aria-label="変換する音声ファイル">
+      <div class="row">
+        <label>形式
+          <select id="a-fmt">
+            <option value="mp3" selected>MP3</option>
+            <option value="wav">WAV</option>
+          </select>
+        </label>
+        <label id="a-bwrap">音質
+          <select id="a-bitrate">
+            <option value="128" selected>128 kbps</option>
+            <option value="192">192 kbps</option>
+            <option value="256">256 kbps</option>
+            <option value="320">320 kbps</option>
+          </select>
+        </label>
+        <button type="button" id="a-go" class="btn primary">変換する</button>
+      </div>
+      <p id="a-err" class="error" role="alert"></p>
+      <p id="a-info" class="note" aria-live="polite"></p>
+      <div class="row"><a id="a-dl" class="btn primary" hidden>ダウンロード</a></div>
+      <p class="note">音声はこの端末のブラウザ内だけで処理され、外部には送信されません。読み込める形式はお使いのブラウザによります。長い音声はメモリを多く使います。</p>
+    </section>
+    <section id="tab-pdf" class="tool" role="tabpanel" hidden>
+      <input id="p-file" type="file" accept="application/pdf,.pdf" aria-label="変換する PDF">
+      <label class="check"><input type="checkbox" id="p-merge"> 続く行をつなげて、段落にまとめる</label>
+      <div class="row"><button type="button" id="p-go" class="btn primary">Word (.docx) に変換する</button></div>
+      <p id="p-err" class="error" role="alert"></p>
+      <p id="p-info" class="note" aria-live="polite"></p>
+      <div class="row"><a id="p-dl" class="btn primary" hidden>ダウンロード</a></div>
+      <p class="note">PDF の文字だけを取り出して Word にします。レイアウト・画像・表は再現されません。スキャンした画像だけの PDF からは、文字を取り出せません。PDF はこの端末のブラウザ内だけで処理され、外部には送信されません。</p>
+    </section>
+  </main>
+
+  <script src="common.js"></script>
+  <script src="files.js"></script>
+</body>
+</html>
