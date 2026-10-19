@@ -162,5 +162,21 @@ window.Tools = (() => {
     });
   }
 
-  return { $, LIBS, loadScript, setDownload, saveText, bindCopy, renderRows, formatSize, baseName };
+  // テキストファイルを読む。文字コードは BOM → UTF-8 → Shift_JIS の順に当てはめる
+  // (日本語の CSV には Shift_JIS のものが多いため)
+  async function readText(file) {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const decode = (label, fatal) => new TextDecoder(label, { fatal }).decode(bytes);
+    if (bytes[0] === 0xff && bytes[1] === 0xfe) return { text: decode("utf-16le", false), encoding: "UTF-16 LE" };
+    if (bytes[0] === 0xfe && bytes[1] === 0xff) return { text: decode("utf-16be", false), encoding: "UTF-16 BE" };
+    try {
+      return { text: decode("utf-8", true), encoding: "UTF-8" };
+    } catch {}
+    try {
+      return { text: decode("shift_jis", true), encoding: "Shift_JIS" };
+    } catch {}
+    return { text: decode("utf-8", false), encoding: "不明(UTF-8 として表示)" };
+  }
+
+  return { $, LIBS, loadScript, setDownload, saveText, bindCopy, renderRows, formatSize, baseName, showTab, readText };
 })();

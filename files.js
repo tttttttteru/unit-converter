@@ -1,6 +1,6 @@
 // ファイル変換ページのツール: データ形式 / エンコード / 画像 / 音声 / PDF→Word。
 (() => {
-  const { $, LIBS, loadScript, setDownload, saveText, bindCopy, formatSize, baseName } = Tools;
+  const { $, LIBS, loadScript, setDownload, saveText, bindCopy, formatSize, baseName, readText } = Tools;
 
   // ---------- データ形式 (JSON / YAML / CSV / XML) ----------
   let autoType = true;
@@ -209,7 +209,7 @@
       dErr.textContent = "ファイルが大きすぎます(5 MB まで)";
       return;
     }
-    dIn.value = await file.text();
+    dIn.value = (await readText(file)).text;
     const ext = file.name.split(".").pop().toLowerCase();
     const format = { json: "json", yaml: "yaml", yml: "yaml", csv: "csv", xml: "xml" }[ext];
     if (format) {
