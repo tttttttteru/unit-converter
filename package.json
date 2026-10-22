@@ -1,0 +1,11 @@
+{
+  "name": "unit-converter",
+  "version": "1.0.0",
+  "private": true,
+  "description": "単位変換・ファイル変換のページ(ビルド不要の静的サイト)",
+  "scripts": {
+    "start": "npx --yes http-server . -p 8123 -c-1 --silent",
+    "samples": "node tools/fetch-samples.mjs",
+    "samples:serve": "npx --yes http-server .samples -p 8124 --cors -c-1 --silent"
+  }
+}

@@ -410,3 +410,110 @@ input[type="range"] {
 .dz-file.bad {
   color: var(--error);
 }
+
+/* 「自動選択」で表示されたツールでは、上のドロップエリアを使うので、ツール側のものは隠す */
+.tool.auto .dropzone {
+  display: none;
+}
+
+/* 検索できるプルダウン */
+.combo-field {
+  display: flex;
+  flex: 1 1 280px;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.combo-field label {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.combo {
+  position: relative;
+}
+
+.combo-input {
+  width: 100%;
+}
+
+.combo-list {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  z-index: 10;
+  max-height: 280px;
+  margin: 4px 0 0;
+  padding: 4px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  box-shadow: 0 6px 20px #0003;
+  list-style: none;
+}
+
+.combo-option {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 12px;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.combo-option.active {
+  background: color-mix(in srgb, var(--accent) 16%, var(--card));
+}
+
+.combo-hint {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.combo-empty {
+  padding: 10px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* 対応形式の一覧 */
+.formats {
+  font-size: 0.85rem;
+}
+
+.formats summary {
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.formats p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+/* 音声ツール */
+.adv {
+  align-items: flex-end;
+  margin-top: 8px;
+}
+
+.adv label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.adv strong {
+  flex: 1 1 100%;
+  font-size: 0.85rem;
+}
+
+#a-prev {
+  width: 100%;
+}

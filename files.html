@@ -14,14 +14,14 @@
     </nav>
 
     <h1>ファイル変換</h1>
-    <p class="lead">画像・音声・PDF のファイル形式や、JSON・CSV などのデータ形式を変換します。ファイルはお使いの端末のブラウザ内だけで処理され、外部には送信されません。</p>
+    <p class="lead">画像(PNG・JPEG・HEIC・TIFF・PSD・RAW など約 170 種類)・音声(MP3・FLAC・WMA・MIDI など約 150 種類)・PDF のファイル形式や、JSON・CSV などのデータ形式を変換します。ファイルはお使いの端末のブラウザ内だけで処理され、外部には送信されません。</p>
 
     <div class="picker">
       <label for="tab-select">変換する種類</label>
       <select id="tab-select">
         <option value="detect">自動選択</option>
-        <option value="image">画像 (PNG・JPEG・WebP)</option>
-        <option value="audio">音声 (MP3・WAV)</option>
+        <option value="image">画像 (PNG・HEIC・TIFF・RAW など)</option>
+        <option value="audio">音声 (MP3・FLAC・WMA・MIDI など)</option>
         <option value="pdf">PDF → Word</option>
         <option value="data">データ形式 (JSON・CSV など)</option>
         <option value="encode">エンコード (Base64 など)</option>
@@ -94,19 +94,19 @@
     </section>
     <section id="tab-image" class="tool" role="tabpanel" hidden>
       <label class="dropzone">
-        <span class="dz-title">画像をここにドラッグ&amp;ドロップ</span>
+        <span class="dz-title">画像ファイルをここにドラッグ&amp;ドロップ</span>
         <span class="dz-sub">またはクリックしてファイルを選ぶ</span>
         <span class="dz-file" aria-live="polite"></span>
         <input id="i-file" type="file" accept="image/*" class="visually-hidden" aria-label="変換する画像">
       </label>
       <div class="row">
-        <label>形式
-          <select id="i-fmt">
-            <option value="image/png">PNG</option>
-            <option value="image/jpeg" selected>JPEG</option>
-            <option value="image/webp">WebP</option>
-          </select>
-        </label>
+        <div class="combo-field">
+          <label for="i-fmt">変換先の形式(拡張子で検索できます)</label>
+          <div class="combo">
+            <input id="i-fmt" class="combo-input" type="text" role="combobox" aria-expanded="false" aria-controls="i-fmt-list" aria-autocomplete="list" autocomplete="off" spellcheck="false" placeholder="例: jpg, ico, tiff">
+            <ul id="i-fmt-list" class="combo-list" role="listbox" hidden></ul>
+          </div>
+        </div>
         <label id="i-qwrap">画質
           <input id="i-q" type="range" min="10" max="100" value="85">
           <output id="i-qv">85</output>%
@@ -114,38 +114,96 @@
       </div>
       <p id="i-err" class="error" role="alert"></p>
       <p id="i-info" class="note"></p>
+      <p id="i-note" class="note"></p>
       <img id="i-prev" class="preview" alt="変換後のプレビュー" hidden>
       <div class="row"><a id="i-dl" class="btn primary" hidden>ダウンロード</a></div>
-      <p class="note">画像はこの端末のブラウザ内だけで処理され、外部には送信されません。読み込める形式はお使いのブラウザによります。</p>
+      <p class="note">画像はこの端末のブラウザ内だけで処理され、外部には送信されません。ブラウザが標準で読めない形式は、プログラムを読み込んで処理します(初回は時間がかかることがあります)。</p>
+      <details class="formats">
+        <summary>対応している形式の一覧</summary>
+        <div id="i-formats"></div>
+      </details>
     </section>
     <section id="tab-audio" class="tool" role="tabpanel" hidden>
       <label class="dropzone">
         <span class="dz-title">音声ファイルをここにドラッグ&amp;ドロップ</span>
         <span class="dz-sub">またはクリックしてファイルを選ぶ</span>
         <span class="dz-file" aria-live="polite"></span>
-        <input id="a-file" type="file" accept="audio/*,video/*" class="visually-hidden" aria-label="変換する音声ファイル">
+        <input id="a-file" type="file" class="visually-hidden" aria-label="変換する音声ファイル">
       </label>
       <div class="row">
-        <label>形式
-          <select id="a-fmt">
-            <option value="mp3" selected>MP3</option>
-            <option value="wav">WAV</option>
-          </select>
-        </label>
+        <div class="combo-field">
+          <label for="a-fmt">変換先の形式(拡張子で検索できます)</label>
+          <div class="combo">
+            <input id="a-fmt" class="combo-input" type="text" role="combobox" aria-expanded="false" aria-controls="a-fmt-list" aria-autocomplete="list" autocomplete="off" spellcheck="false" placeholder="例: mp3, flac, m4a, wma">
+            <ul id="a-fmt-list" class="combo-list" role="listbox" hidden></ul>
+          </div>
+        </div>
         <label id="a-bwrap">音質
-          <select id="a-bitrate">
-            <option value="128" selected>128 kbps</option>
-            <option value="192">192 kbps</option>
-            <option value="256">256 kbps</option>
-            <option value="320">320 kbps</option>
-          </select>
+          <select id="a-bitrate"></select>
         </label>
-        <button type="button" id="a-go" class="btn primary">変換する</button>
+        <label id="a-bitswrap">ビット深度
+          <select id="a-bits"></select>
+        </label>
       </div>
+      <p id="a-fmt-note" class="note"></p>
+      <details id="a-adv" class="formats">
+        <summary>詳細設定(サンプルレート・チャンネル数)</summary>
+        <div class="row adv">
+          <label>サンプルレート
+            <select id="a-rate">
+              <option value="">そのまま</option>
+              <option value="8000">8000 Hz</option>
+              <option value="11025">11025 Hz</option>
+              <option value="16000">16000 Hz</option>
+              <option value="22050">22050 Hz</option>
+              <option value="32000">32000 Hz</option>
+              <option value="44100">44100 Hz</option>
+              <option value="48000">48000 Hz</option>
+              <option value="96000">96000 Hz</option>
+            </select>
+          </label>
+          <label>チャンネル
+            <select id="a-ch">
+              <option value="">そのまま</option>
+              <option value="1">モノラル</option>
+              <option value="2">ステレオ</option>
+            </select>
+          </label>
+        </div>
+        <div id="a-rawbox" class="row adv" hidden>
+          <strong>生データの設定(ヘッダーのないファイルなので、指定が必要です)</strong>
+          <label>データの形式
+            <select id="a-rawenc">
+              <option value="s16le">16 ビット(リトルエンディアン)</option>
+              <option value="s16be">16 ビット(ビッグエンディアン)</option>
+              <option value="u8">8 ビット(符号なし)</option>
+              <option value="s8">8 ビット(符号付き)</option>
+              <option value="s24le">24 ビット(リトルエンディアン)</option>
+              <option value="s24be">24 ビット(ビッグエンディアン)</option>
+              <option value="s32le">32 ビット(リトルエンディアン)</option>
+              <option value="s32be">32 ビット(ビッグエンディアン)</option>
+              <option value="f32le">32 ビット小数(リトルエンディアン)</option>
+              <option value="f32be">32 ビット小数(ビッグエンディアン)</option>
+              <option value="mulaw">μ-law (8 ビット)</option>
+              <option value="alaw">A-law (8 ビット)</option>
+              <option value="oki">OKI ADPCM (VOX)</option>
+            </select>
+          </label>
+          <label>サンプルレート <input id="a-rawrate" type="number" min="1000" max="768000" step="1" value="44100"></label>
+          <label>チャンネル数 <input id="a-rawch" type="number" min="1" max="8" step="1" value="2"></label>
+        </div>
+      </details>
+      <div class="row"><button type="button" id="a-go" class="btn primary">変換する</button></div>
       <p id="a-err" class="error" role="alert"></p>
       <p id="a-info" class="note" aria-live="polite"></p>
+      <p id="a-note" class="note"></p>
       <div class="row"><a id="a-dl" class="btn primary" hidden>ダウンロード</a></div>
-      <p class="note">音声はこの端末のブラウザ内だけで処理され、外部には送信されません。読み込める形式はお使いのブラウザによります。長い音声はメモリを多く使います。</p>
+      <audio id="a-prev" controls hidden></audio>
+      <p class="note">音声はこの端末のブラウザ内だけで処理され、外部には送信されません。MP3 や AAC などはブラウザの機能で、ほかの形式は変換用のプログラム(ffmpeg)で処理します。ffmpeg は約 32 MB あり、必要になった初回だけ読み込みます。長い音声はメモリを多く使います。</p>
+      <details class="formats">
+        <summary>対応している形式の一覧</summary>
+        <div id="a-formats"></div>
+      </details>
     </section>
     <section id="tab-pdf" class="tool" role="tabpanel" hidden>
       <label class="dropzone">
@@ -164,6 +222,12 @@
   </main>
 
   <script src="common.js"></script>
+  <script src="combobox.js"></script>
+  <script src="imagein.js"></script>
+  <script src="imageout.js"></script>
+  <script src="ffmpeg.js"></script>
+  <script src="audioin.js"></script>
+  <script src="audioout.js"></script>
   <script src="files.js"></script>
   <script src="detect.js"></script>
 </body>

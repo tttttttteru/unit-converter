@@ -1,0 +1,2 @@
+# 改行は、どの PC でも LF にそろえる(Windows で「LF が CRLF に置き換えられます」と出るのを防ぐ)
+* text=auto eol=lf

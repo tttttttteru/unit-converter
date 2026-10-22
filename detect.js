@@ -96,11 +96,7 @@
   }
 
   const TOOLS = {
-    image: {
-      tab: "image",
-      // SVG はファイルの種類が分からないと画像として読み込めないので、種類を付け直して渡す
-      open: (f, kind) => handOff(kind === "svg" ? new File([f], f.name, { type: "image/svg+xml" }) : f, "i-file"),
-    },
+    image: { tab: "image", open: (f) => handOff(f, "i-file") },
     audio: { tab: "audio", open: (f) => handOff(f, "a-file") },
     pdf: { tab: "pdf", open: (f) => handOff(f, "p-file") },
     // 拡張子が中身と違うこともあるので、判定した形式をそのまま指定して渡す
@@ -123,16 +119,22 @@
   };
 
   // ---------- 本体 ----------
+  const extOf = (name) => (name.match(/\.([^.]+)$/)?.[1] ?? "").toLowerCase();
   const message = $("x-msg");
   let run = 0;
 
   // どのツールに渡すかを決める。渡せないときは、その理由を返す
   async function choose(file) {
     const head = new Uint8Array(await file.slice(0, 4096).arrayBuffer());
+    // 画像の拡張子(.tga .psd .raw .ai など、中身では分かりにくいものを含む)は、画像ツールへ。読めない形式なら、画像ツールが理由を表示する
+    if (ImageIn.isImageExt(extOf(file.name))) return { tool: TOOLS.image };
+    // 音声の拡張子(.wma .ape .mid .mod など、中身では分かりにくいものを含む)は、音声ツールへ。読めない形式なら、音声ツールが理由を表示する
+    if (AudioIn.isAudioExt(extOf(file.name))) return { tool: TOOLS.audio };
     const found = SIGNATURES.find((s) => s.test(head));
     if (found) {
       return found.kind === "other" ? { reason: `${found.label}は、このページでは変換できません` } : { tool: TOOLS[found.kind] };
     }
+    if (ImageIn.canSniff(head)) return { tool: TOOLS.image };
     if (!looksLikeText(head)) return { reason: "種類を判別できないファイルです" };
     if (file.size > TEXT_LIMIT) return { reason: "テキストファイルが大きすぎます(5 MB まで)" };
 
@@ -157,7 +159,11 @@
     if (id !== run) return;
     if (!tool) return fail(reason);
     // プルダウンは「自動選択」のまま、判定したツールだけをドロップエリアの下に出す
-    for (const t of Object.values(TOOLS)) $("tab-" + t.tab).hidden = t !== tool;
+    for (const t of Object.values(TOOLS)) {
+      $("tab-" + t.tab).hidden = t !== tool;
+      // 上のドロップエリアがあるので、ツール側のドロップエリアは隠す(重複して見えないように)
+      $("tab-" + t.tab).classList.toggle("auto", t === tool);
+    }
     await tool.open(file, kind);
   }
 
@@ -170,6 +176,7 @@
   $("tab-select").addEventListener("change", () => {
     run++;
     message.textContent = "";
+    for (const t of Object.values(TOOLS)) $("tab-" + t.tab).classList.remove("auto");
     $("x-file").value = "";
     $("x-file").closest(".dropzone").querySelector(".dz-file").textContent = "";
   });

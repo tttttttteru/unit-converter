@@ -1,0 +1,15 @@
+# 動作確認用にダウンロードしたサンプル(tools/fetch-samples.mjs が作る)
+.samples/
+
+# OS・エディタ
+Thumbs.db
+Desktop.ini
+.DS_Store
+.vscode/
+.idea/
+
+# Node
+node_modules/
+
+# Claude Code の個人設定
+.claude/settings.local.json

@@ -9,6 +9,11 @@ window.Tools = (() => {
     zip: "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js",
     pdf: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",
     pdfWorker: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js",
+    pako: "https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js", // TIFF の Deflate 圧縮に必要(UTIF より先に読み込む)
+    utif: "https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js",
+    psd: "https://cdn.jsdelivr.net/npm/ag-psd@31.0.3/dist/bundle.js",
+    heic: "https://cdnjs.cloudflare.com/ajax/libs/heic2any/0.0.4/heic2any.min.js",
+    jsquash: "https://cdn.jsdelivr.net/npm/@jsquash/", // AVIF・JPEG XL(WebAssembly)。ES モジュールとして import する
   };
 
   const loading = {};
@@ -112,12 +117,16 @@ window.Tools = (() => {
   function bindDropZone(zone) {
     const input = zone.querySelector('input[type="file"]');
     const label = zone.querySelector(".dz-file");
-    const accepts = (input.accept || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
-    const accepted = (file) =>
-      !accepts.length ||
-      accepts.some((a) =>
-        a.startsWith(".") ? file.name.toLowerCase().endsWith(a) : a.endsWith("/*") ? file.type.startsWith(a.slice(0, -1)) : file.type === a
+    // accept は、あとから(別のスクリプトが)設定することがあるので、判定のたびに読む
+    const accepted = (file) => {
+      const accepts = (input.accept || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+      return (
+        !accepts.length ||
+        accepts.some((a) =>
+          a.startsWith(".") ? file.name.toLowerCase().endsWith(a) : a.endsWith("/*") ? file.type.startsWith(a.slice(0, -1)) : file.type === a
+        )
       );
+    };
 
     const show = (text, bad) => {
       label.textContent = text;

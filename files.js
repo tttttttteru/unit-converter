@@ -1,6 +1,6 @@
 // ファイル変換ページのツール: データ形式 / エンコード / 画像 / 音声 / PDF→Word。
 (() => {
-  const { $, LIBS, loadScript, setDownload, saveText, bindCopy, formatSize, baseName, readText } = Tools;
+  const { $, setDownload, saveText, bindCopy, formatSize, baseName, readText, LIBS, loadScript } = Tools;
 
   // ---------- データ形式 (JSON / YAML / CSV / XML) ----------
   let autoType = true;
@@ -293,169 +293,275 @@
 
   // ---------- 画像 ----------
   const iFile = $("i-file");
-  const iFmt = $("i-fmt");
   const iQ = $("i-q");
+  let iFormat = ImageOut.FORMATS.find((f) => f.id === "jpeg");
+  let iExt = "jpg";
+  let iDecoded = null; // 読み込んだ画像(形式や画質を変えるたびに、読み直さない)
   let iRun = 0;
+  let iPreviewUrl = null;
+
+  iFile.accept = ImageIn.accept;
+
+  const frame = () => new Promise((resolve) => setTimeout(resolve, 30));
+  const hasJapanese = (s) => /[\u3040-\u30ff\u4e00-\u9fff]/.test(s);
+
+  function syncQuality() {
+    $("i-qwrap").hidden = !iFormat.quality;
+    $("i-qv").textContent = iQ.value;
+  }
+
+  // ブラウザがそのまま表示できる形式なら変換後を、そうでなければ読み込んだ画像を、プレビューにする
+  const DISPLAYABLE = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/bmp", "image/avif", "image/svg+xml", "image/x-icon", "image/vnd.microsoft.icon"];
+
+  function showPreview(url, owned) {
+    if (iPreviewUrl) URL.revokeObjectURL(iPreviewUrl);
+    iPreviewUrl = owned ? url : null;
+    $("i-prev").src = url;
+    $("i-prev").hidden = false;
+  }
 
   async function convertImage() {
     const file = iFile.files[0];
-    $("i-qwrap").hidden = iFmt.value === "image/png";
-    $("i-qv").textContent = iQ.value;
+    syncQuality();
     if (!file) return;
     const run = ++iRun;
     const err = $("i-err");
     err.textContent = "";
-    const url = URL.createObjectURL(file);
+    $("i-note").textContent = "";
+    $("i-info").textContent = "変換中…";
     try {
-      const img = new Image();
-      img.src = url;
-      await img.decode();
-      const canvas = document.createElement("canvas");
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-      if (!canvas.width || !canvas.height) throw new Error("size");
-      const ctx = canvas.getContext("2d");
-      if (iFmt.value === "image/jpeg") {
-        // JPEG は透明を持てないので、白で塗りつぶしてから描く
-        ctx.fillStyle = "#fff";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      if (iDecoded?.file !== file) {
+        if (iDecoded?.source) URL.revokeObjectURL(iDecoded.source);
+        iDecoded = { file, result: await ImageIn.decode(file), source: null };
       }
-      ctx.drawImage(img, 0, 0);
-      const blob = await new Promise((resolve) => canvas.toBlob(resolve, iFmt.value, iQ.value / 100));
       if (run !== iRun) return;
-      if (!blob) throw new Error("encode");
-      const ext = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" }[blob.type] ?? "png";
+      const { canvas, notes } = iDecoded.result;
+      await frame(); // AVIF などの重い変換の前に、「変換中…」を画面に出す
+      const blob = await ImageOut.encode(iFormat, canvas, { quality: Number(iQ.value), ext: iExt });
+      if (run !== iRun) return;
+
+      // WebP などを書き出せないブラウザでは、PNG になってしまう
+      let ext = iExt;
+      let mismatch = "";
+      if (iFormat.id === "webp" && blob.type !== "image/webp") {
+        ext = "png";
+        mismatch = "(このブラウザは WebP を書き出せないため、PNG になりました)";
+      }
       setDownload($("i-dl"), blob, baseName(file) + "." + ext);
-      $("i-prev").src = $("i-dl").href;
-      $("i-prev").hidden = false;
-      let info = `${canvas.width} × ${canvas.height} px / ${formatSize(file.size)} → ${formatSize(blob.size)}`;
-      if (blob.type !== iFmt.value) info += `(このブラウザは選んだ形式で書き出せないため、${ext.toUpperCase()} になりました)`;
-      $("i-info").textContent = info;
-    } catch {
+
+      const displayable = DISPLAYABLE.includes(blob.type);
+      if (displayable) {
+        showPreview(URL.createObjectURL(blob), true);
+      } else {
+        iDecoded.source ??= URL.createObjectURL(await new Promise((resolve) => canvas.toBlob(resolve, "image/png")));
+        showPreview(iDecoded.source, false);
+      }
+      $("i-info").textContent = `${canvas.width} × ${canvas.height} px / ${formatSize(file.size)} → ${formatSize(blob.size)}${mismatch}`;
+      $("i-note").textContent = [...notes, iFormat.note, displayable ? "" : "プレビューは、変換前の画像を表示しています"].filter(Boolean).join(" / ");
+    } catch (e) {
       if (run !== iRun) return;
-      err.textContent = "この画像は変換できません。画像として読み込めない形式かもしれません";
+      if (!(e instanceof ImageIn.UserError)) console.error(e); // 利用者向けの案内は、画面に出すだけでよい
+      err.textContent = e instanceof ImageIn.UserError || hasJapanese(e.message) ? e.message : "変換できませんでした。壊れたファイルか、対応していない形式かもしれません";
       $("i-dl").hidden = true;
       $("i-prev").hidden = true;
       $("i-info").textContent = "";
-    } finally {
-      URL.revokeObjectURL(url);
     }
   }
 
+  // 変換先の形式(拡張子などで検索できるプルダウン)
+  const iCombo = Tools.createCombo({
+    input: $("i-fmt"),
+    list: $("i-fmt-list"),
+    search: ImageOut.search,
+    whyNot: ImageOut.whyNot,
+    label: ({ format, ext }) => `${format.label} (.${ext})`,
+    hint: ({ format }) => format.exts.map((e) => "." + e).join(" "),
+    onSelect: ({ format, ext }) => {
+      iFormat = format;
+      iExt = ext;
+      if (format.defaultQuality) iQ.value = format.defaultQuality;
+      convertImage();
+    },
+  });
+  iCombo.set({ format: iFormat, ext: iExt });
+
+  // 読み込める・書き出せる形式の一覧(開いて確認できる)
+  (() => {
+    const group = (title, exts) => (exts.length ? `<p><strong>${title}</strong><br>${exts.map((e) => "." + e).join(" ")}</p>` : "");
+    const kinds = { full: [], browser: [], preview: [], none: [] };
+    for (const ext of ImageIn.extensions) kinds[ImageIn.kindOf(ext)].push(ext);
+    const outputs = ImageOut.FORMATS.flatMap((f) => f.exts);
+    $("i-formats").innerHTML =
+      group("読み込める形式", kinds.full) +
+      group("お使いのブラウザによって読める形式(Safari など)", kinds.browser) +
+      group("中のプレビュー画像だけ取り出せる形式(RAW 写真・お絵かきソフトのファイルなど)", kinds.preview) +
+      group("読み込めない形式", kinds.none) +
+      group("変換先にできる形式", outputs);
+  })();
+
+  let iTimer;
   iFile.addEventListener("change", convertImage);
-  iFmt.addEventListener("change", convertImage);
-  iQ.addEventListener("input", convertImage);
-  $("i-qwrap").hidden = iFmt.value === "image/png";
+  iQ.addEventListener("input", () => {
+    syncQuality();
+    clearTimeout(iTimer);
+    iTimer = setTimeout(convertImage, 250);
+  });
+  syncQuality();
 
   // ---------- 音声 ----------
   const aFile = $("a-file");
-  const aFmt = $("a-fmt");
+  let aFormat = AudioOut.FORMATS.find((f) => f.id === "mp3");
+  let aExt = "mp3";
+  let aDecoded = null; // 読み込んだ音(形式を変えるたびに、読み直さない)
+  let aRunning = false;
 
-  function toInt16(float) {
-    const out = new Int16Array(float.length);
-    for (let i = 0; i < float.length; i++) {
-      const s = Math.max(-1, Math.min(1, float[i]));
-      out[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+  aFile.accept = AudioIn.accept;
+
+  const extOf = (name) => (name.match(/\.([^.]+)$/)?.[1] ?? "").toLowerCase();
+  const hasJapaneseText = (s) => /[\u3040-\u30ff\u4e00-\u9fff]/.test(s);
+  const clock = (seconds) => {
+    const s = Math.round(seconds);
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  };
+
+  // 形式に合わせて、音質・ビット深度の選択肢を作り直す
+  function syncAudioOptions() {
+    const rate = $("a-bitrate");
+    $("a-bwrap").hidden = !aFormat.bitrates;
+    if (aFormat.bitrates) {
+      rate.replaceChildren(...aFormat.bitrates.map((k) => new Option(`${k} kbps`, k)));
+      rate.value = aFormat.defaultBitrate;
     }
-    return out;
+    const bits = $("a-bits");
+    $("a-bitswrap").hidden = !aFormat.bits;
+    if (aFormat.bits) {
+      bits.replaceChildren(...aFormat.bits.map(([v, label]) => new Option(label, v)));
+      bits.value = aFormat.defaultBits;
+    }
+    $("a-fmt-note").textContent = aFormat.note ?? "";
   }
 
-  function encodeWav(buffer) {
-    const channels = buffer.numberOfChannels;
-    const frames = buffer.length;
-    const size = 44 + frames * channels * 2;
-    const view = new DataView(new ArrayBuffer(size));
-    const text = (offset, s) => [...s].forEach((c, i) => view.setUint8(offset + i, c.charCodeAt(0)));
-    text(0, "RIFF");
-    view.setUint32(4, size - 8, true);
-    text(8, "WAVEfmt ");
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, channels, true);
-    view.setUint32(24, buffer.sampleRate, true);
-    view.setUint32(28, buffer.sampleRate * channels * 2, true);
-    view.setUint16(32, channels * 2, true);
-    view.setUint16(34, 16, true);
-    text(36, "data");
-    view.setUint32(40, frames * channels * 2, true);
-    const data = Array.from({ length: channels }, (_, c) => toInt16(buffer.getChannelData(c)));
-    let offset = 44;
-    for (let i = 0; i < frames; i++) {
-      for (let c = 0; c < channels; c++) {
-        view.setInt16(offset, data[c][i], true);
-        offset += 2;
-      }
+  // 拡張子が生データ(ヘッダーなし)のときだけ、サンプルレートなどの指定欄を出す
+  function syncRawSettings() {
+    const file = aFile.files[0];
+    const raw = file && AudioIn.isRaw(extOf(file.name));
+    $("a-rawbox").hidden = !raw;
+    if (raw) {
+      const d = AudioIn.rawDefaults(extOf(file.name));
+      $("a-rawenc").value = d.encoding;
+      $("a-rawrate").value = d.rate;
+      $("a-rawch").value = d.channels;
+      $("a-adv").open = true;
     }
-    return new Blob([view], { type: "audio/wav" });
   }
 
-  async function encodeMp3(buffer, kbps, onProgress) {
-    await loadScript(LIBS.lame);
-    const stereo = buffer.numberOfChannels > 1;
-    const encoder = new lamejs.Mp3Encoder(stereo ? 2 : 1, buffer.sampleRate, kbps);
-    const left = toInt16(buffer.getChannelData(0));
-    const right = stereo ? toInt16(buffer.getChannelData(1)) : null;
-    const parts = [];
-    const block = 1152 * 20;
-    for (let i = 0; i < left.length; i += block) {
-      const l = left.subarray(i, i + block);
-      const chunk = right ? encoder.encodeBuffer(l, right.subarray(i, i + block)) : encoder.encodeBuffer(l);
-      if (chunk.length) parts.push(chunk);
-      if ((i / block) % 20 === 0) {
-        onProgress(i / left.length);
-        await new Promise((resolve) => setTimeout(resolve));
-      }
-    }
-    const rest = encoder.flush();
-    if (rest.length) parts.push(rest);
-    return new Blob(parts, { type: "audio/mpeg" });
-  }
+  const rawSettings = () => ($("a-rawbox").hidden ? undefined : { encoding: $("a-rawenc").value, rate: Number($("a-rawrate").value), channels: Number($("a-rawch").value) });
 
   async function convertAudio() {
     const file = aFile.files[0];
     const err = $("a-err");
     const info = $("a-info");
     err.textContent = "";
+    $("a-note").textContent = "";
     $("a-dl").hidden = true;
+    $("a-prev").hidden = true;
     if (!file) {
       err.textContent = "ファイルを選んでください";
       return;
     }
+    if (aRunning) return;
+    aRunning = true;
     $("a-go").disabled = true;
     try {
       info.textContent = "読み込み中…";
-      const context = new (window.AudioContext || window.webkitAudioContext)();
-      let buffer;
-      try {
-        buffer = await context.decodeAudioData(await file.arrayBuffer());
-      } catch {
-        throw new Error("このファイルは読み込めません。ブラウザが対応していない形式かもしれません");
-      } finally {
-        context.close();
+      const raw = rawSettings();
+      const key = JSON.stringify(raw ?? null);
+      if (aDecoded?.file !== file || aDecoded.key !== key) {
+        aDecoded = null;
+        aDecoded = { file, key, pcm: await AudioIn.decode(file, { raw, onStatus: (t) => (info.textContent = t) }) };
       }
-      let blob;
-      if (aFmt.value === "wav") {
-        info.textContent = "WAV に変換中…";
-        blob = encodeWav(buffer);
-      } else {
-        blob = await encodeMp3(buffer, Number($("a-bitrate").value), (p) => {
-          info.textContent = `MP3 に変換中… ${Math.round(p * 100)}%`;
-        });
+      const pcm = aDecoded.pcm;
+      const result = await AudioOut.encode(
+        aFormat,
+        pcm,
+        {
+          ext: aExt,
+          bitrate: aFormat.bitrates ? Number($("a-bitrate").value) : undefined,
+          bits: aFormat.bits ? $("a-bits").value : undefined,
+          rate: Number($("a-rate").value) || undefined,
+          channels: Number($("a-ch").value) || undefined,
+        },
+        {
+          onStatus: (t) => (info.textContent = t),
+          onProgress: (p) => (info.textContent = `変換中… ${Math.min(100, Math.round(p * 100))}%`),
+        }
+      );
+      setDownload($("a-dl"), result.blob, baseName(file) + "." + aExt);
+      info.textContent = `${clock(pcm.duration)} / ${result.rate.toLocaleString("ja-JP")} Hz / ${result.channels === 1 ? "モノラル" : result.channels === 2 ? "ステレオ" : result.channels + " ch"}  ${formatSize(file.size)} → ${formatSize(result.blob.size)}`;
+      $("a-note").textContent = [...pcm.notes, ...result.notes, aFormat.note].filter(Boolean).join(" / ");
+      // ブラウザで再生できるなら、聞いて確かめられるようにする
+      const player = $("a-prev");
+      if (player.canPlayType(result.blob.type)) {
+        if (player.dataset.url) URL.revokeObjectURL(player.dataset.url);
+        player.dataset.url = URL.createObjectURL(result.blob);
+        player.src = player.dataset.url;
+        player.hidden = false;
       }
-      setDownload($("a-dl"), blob, baseName(file) + "." + aFmt.value);
-      info.textContent = `完了: ${buffer.duration.toFixed(1)} 秒 / ${formatSize(file.size)} → ${formatSize(blob.size)}`;
     } catch (e) {
+      console.error(e);
       info.textContent = "";
-      err.textContent = "変換できません: " + e.message;
+      const known = e instanceof AudioIn.UserError || hasJapaneseText(e.message);
+      err.textContent = "変換できません: " + (known ? e.message : "壊れたファイルか、対応していない形式かもしれません");
     } finally {
+      aRunning = false;
       $("a-go").disabled = false;
     }
   }
 
-  const syncAudioUi = () => ($("a-bwrap").hidden = aFmt.value === "wav");
-  aFmt.addEventListener("change", syncAudioUi);
+  // 変換先の形式(拡張子などで検索できるプルダウン)
+  const aCombo = Tools.createCombo({
+    input: $("a-fmt"),
+    list: $("a-fmt-list"),
+    search: AudioOut.search,
+    whyNot: AudioOut.whyNot,
+    label: ({ format, ext }) => `${format.label} (.${ext})`,
+    hint: ({ format }) => format.exts.map((e) => "." + e).join(" "),
+    onSelect: ({ format, ext }) => {
+      aFormat = format;
+      aExt = ext;
+      syncAudioOptions();
+    },
+  });
+  aCombo.set({ format: aFormat, ext: aExt });
+  syncAudioOptions();
+
+  // 読み込める・書き出せる形式の一覧(開いて確認できる)
+  (() => {
+    const group = (title, exts) => (exts.length ? `<p><strong>${title}</strong><br>${exts.map((e) => "." + e).join(" ")}</p>` : "");
+    const direct = [];
+    const video = [];
+    const music = [];
+    const none = [];
+    for (const ext of AudioIn.extensions) {
+      const readers = AudioIn.readers[ext];
+      if (!readers.length) none.push(ext);
+      else if (AudioIn.videoExts.includes(ext)) video.push(ext);
+      else if (readers.includes("midi") || readers.includes("tracker") || readers.includes("sid")) music.push(ext);
+      else direct.push(ext);
+    }
+    $("a-formats").innerHTML =
+      group("読み込める形式", direct) +
+      group("動画ファイル(音声だけを取り出します)", video) +
+      group("楽譜・演奏データ(MIDI は簡易音源で、トラッカー音楽・SID は専用プログラムで音にします)", music) +
+      group("読み込めない形式", none) +
+      group("変換先にできる形式", [...new Set(AudioOut.FORMATS.flatMap((f) => f.exts))]);
+  })();
+
+  aFile.addEventListener("change", () => {
+    $("a-err").textContent = "";
+    syncRawSettings();
+  });
   $("a-go").addEventListener("click", convertAudio);
-  syncAudioUi();
 
   // ---------- PDF → Word ----------
   const CJK = /[　-鿿＀-￯]/;
